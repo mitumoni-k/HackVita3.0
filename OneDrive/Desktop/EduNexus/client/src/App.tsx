@@ -517,7 +517,7 @@ function App() {
 
       return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center animate-fadeIn">
-          <Header />
+        
           <div className="max-w-2xl w-full px-4 py-12">
             <div className="bg-white rounded-2xl shadow-xl p-8 text-center flex flex-col items-center justify-center transform hover:scale-105 transition-transform duration-300">
               <h2 className="text-3xl font-bold text-gray-900 mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
@@ -580,7 +580,7 @@ function App() {
               </div>
             </div>
           </div>
-          <Footer />
+        
         </div>
       );
     }
