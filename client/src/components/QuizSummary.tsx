@@ -13,6 +13,8 @@ import {
   Loader,
   MessageSquare,
   Home,
+  Bot,
+  ArrowRight,
 } from "lucide-react"
 
 export interface QuizResult {
@@ -32,11 +34,15 @@ interface QuizSummaryProps {
   onHome: () => void;
 }
 
+
 export function QuizSummary({ score, totalQuestions, feedback, results, onRestart }: QuizSummaryProps) {
-  const [activePage, setActivePage] = useState<"summary" | "details" | "studyGuide">("summary")
+  const [activePage, setActivePage] = useState<"summary" | "details" | "studyGuide" | "aiTutor">("summary")
   const [studyHelpResponse, setStudyHelpResponse] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [tutorChat, setTutorChat] = useState<{ message: string; sender: "user" | "ai" }[]>([])
+  const [userMessage, setUserMessage] = useState("")
+  const [isTutorLoading, setIsTutorLoading] = useState(false)
 
   const percentage = (score / totalQuestions) * 100
 
@@ -89,6 +95,124 @@ export function QuizSummary({ score, totalQuestions, feedback, results, onRestar
     }
   }
 
+  const toggleExplanation = (id: string) => {
+    // setExpandedExplanations((prev) => ({
+    //   ...prev,
+    //   [id]: !prev[id],
+    // }))
+  }
+
+  const handleStartAITutor = async () => {
+    setActivePage("aiTutor");
+  
+    if (tutorChat.length === 0) {
+      setIsTutorLoading(true);
+      setError("");
+  
+      // Build the detailed summary from all quiz results (Study Guide Insights)
+      const summaryMessage = results
+        .map(
+          (result) =>
+            `Question: ${result.question}\nYour Answer: ${result.userAnswer || "Skipped"}\nCorrect Answer: ${result.correctAnswer}\nExplanation: ${result.explanation}`
+        )
+        .join("\n\n");
+  
+      try {
+        // Send study-guide insights to the backend
+        const response = await axios.post("http://localhost:8000/ai-tutor", {
+          message: summaryMessage,
+        });
+  
+        // Initialize with AI Tutor's response
+        setTutorChat([
+          {
+            message:
+              response.data.help ||
+              `Hi there! I'm your AI tutor. I've analyzed your quiz results (${score}/${totalQuestions}) and I'm here to help you understand any concepts you're struggling with. What would you like to learn more about?`,
+            sender: "ai",
+          },
+        ]);
+      } catch (error) {
+        console.error("Error sending study guide insights:", error);
+        setTutorChat([
+          {
+            message:
+              "Hi there! I'm your AI tutor. I couldn't retrieve your study insights, but I'm here to help you understand any concepts you're struggling with. What would you like to learn more about?",
+            sender: "ai",
+          },
+        ]);
+      } finally {
+        setIsTutorLoading(false);
+      }
+    }
+  };
+  
+
+  const handleSendMessage = async () => {
+    if (!userMessage.trim()) return;
+  
+    const newMessage = {
+      message: userMessage,
+      sender: "user" as const,
+    };
+  
+    setTutorChat((prev) => [...prev, newMessage]);
+    setUserMessage("");
+    setIsTutorLoading(true);
+  
+    // Build context from quiz results
+    const quizContext = results
+      .map(
+        (result) =>
+          `Question: ${result.question}\nUser Answer: ${result.userAnswer || "Skipped"}\nCorrect Answer: ${result.correctAnswer}`
+      )
+      .join("\n\n");
+  
+    try {
+      // Send message to AI tutor API
+      const response = await axios.post("http://localhost:8000/study-help", {
+        message: userMessage,
+        context: quizContext,
+        score,
+        totalQuestions,
+      });
+  
+      // Check if the response data is valid and contains a help property
+      if (response.data && response.data.help) {
+        setTutorChat((prev) => [
+          ...prev,
+          {
+            message: response.data.help,
+            sender: "ai",
+          },
+        ]);
+      } else {
+        // Handle the case where the response data is missing or invalid
+        console.error("Invalid response from AI tutor API:", response.data);
+        setTutorChat((prev) => [
+          ...prev,
+          {
+            message:
+              "I'm sorry, I couldn't process your question. The AI response was invalid.",
+            sender: "ai",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error sending message to AI tutor:", error);
+      setTutorChat((prev) => [
+        ...prev,
+        {
+          message:
+            "Sorry, I'm having trouble connecting right now. Please try again in a moment.",
+          sender: "ai",
+        },
+      ]);
+    } finally {
+      setIsTutorLoading(false);
+    }
+  };
+  
   return (
     <div className="w-full max-w-3xl bg-gradient-to-b from-white to-purple-50 rounded-2xl shadow-xl p-8 animate-fadeIn relative overflow-hidden">
       {/* Background decoration */}
@@ -294,8 +418,104 @@ export function QuizSummary({ score, totalQuestions, feedback, results, onRestar
                     )}
                   </div>
                 </div>
+
+                {/* AI Tutor Button */}
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={handleStartAITutor}
+                    className="group bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-xl hover:opacity-90 transition-all hover:shadow-lg flex items-center space-x-3"
+                  >
+                    <Bot className="w-5 h-5" />
+                    <span>Chat with AI Tutor</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Tutor Page */}
+      {activePage === "aiTutor" && (
+        <div className="mb-8 animate-fadeIn relative z-10">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex justify-between items-center rounded-t-xl">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <Bot className="w-5 h-5 mr-2" />
+              AI Tutor Chat
+            </h3>
+            <button
+              onClick={() => setActivePage("studyGuide")}
+              className="text-white hover:text-purple-200 transition-colors p-1 rounded-full hover:bg-white/10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="bg-white rounded-b-xl border-x-2 border-b-2 border-purple-100 flex flex-col h-[60vh]">
+            {/* Chat Messages */}
+            <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
+              <div className="space-y-4">
+                {tutorChat.map((chat, index) => (
+                  <div key={index} className={`flex ${chat.sender === "ai" ? "justify-start" : "justify-end"}`}>
+                    <div
+                      className={`max-w-[80%] rounded-2xl p-4 ${
+                        chat.sender === "ai"
+                          ? "bg-gradient-to-r from-purple-50 to-indigo-50 text-gray-800 border border-purple-100"
+                          : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                      }`}
+                    >
+                      {chat.sender === "ai" && (
+                        <div className="flex items-center mb-2">
+                          <Bot className="w-5 h-5 text-purple-600 mr-2" />
+                          <span className="font-medium text-purple-700">AI Tutor</span>
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap">{chat.message}</p>
+                    </div>
+                  </div>
+                ))}
+                {isTutorLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl p-4 bg-gradient-to-r from-purple-50 to-indigo-50 text-gray-800 border border-purple-100">
+                      <div className="flex items-center">
+                        <Bot className="w-5 h-5 text-purple-600 mr-2" />
+                        <span className="font-medium text-purple-700">AI Tutor</span>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></div>
+                        <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse delay-150"></div>
+                        <div className="w-2 h-2 rounded-full bg-purple-600 animate-pulse delay-300"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                  placeholder="Ask your AI tutor a question..."
+                  className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!userMessage.trim() || isTutorLoading}
+                  className={`px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white flex items-center ${
+                    !userMessage.trim() || isTutorLoading ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+                  }`}
+                >
+                  <span>Send</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

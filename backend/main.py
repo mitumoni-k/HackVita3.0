@@ -141,6 +141,6 @@ async def study_help(request: StudyHelpRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Run the API with Uvicorn
-if _name_ == "_main_":
+if __name__ == "_main_":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
