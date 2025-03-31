@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, FileText, Video, Download, ChevronDown } from "lucide-react";
+import { GraduationCap, FileText, Download, ChevronDown } from "lucide-react";
 
 // Resource type interfaces
 interface Resource {
@@ -76,7 +76,7 @@ const ResourcesSection = () => {
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <div className="inline-block p-4 bg-white rounded-full mb-6 shadow-lg">
-            <BookOpen className="w-12 h-12 text-violet-600" />
+            <GraduationCap className="w-12 h-12 text-violet-600" />
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">Educational Resources</h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">Explore a curated collection of study materials across different education levels.</p>

@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react"
 
+
 export interface QuizResult {
   id: string
   question: string

@@ -11,10 +11,10 @@ session_context = {}  # To store context for each session
 
 # Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Configure Google Gemini API
-genai.configure(api_key=GOOGLE_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
 app = FastAPI()
 
@@ -47,21 +47,22 @@ async def generate_quiz(request: QuizRequest):
     print("📩 Received Request:", request.dict())  # ✅ Debugging
 
     prompt = (
-        f"Generate 10 multiple-choice questions for {request.topic} at {request.difficulty} difficulty. "
-        "Provide the response in *raw JSON format* (no markdown, no extra text) with the following structure:\n"
-        "{\n"
-        '  "questions": [\n'
-        '    {\n'
-        '      "id": "unique_question_id",\n'
-        '      "question": "The actual question text?",\n'
-        '      "options": ["option1", "option2", "option3", "option4"],\n'
-        '      "correctAnswer": "Correct option text",\n'
-        '      "explanation": "Brief explanation of the correct answer."\n'
-        '    },\n'
-        "    ... (repeat for 10 questions) ...\n"
-        "  ]\n"
-        "}"
-    )
+    f"Generate 10 multiple-choice questions for {request.topic} at {request.difficulty} difficulty. "
+    "Provide the response in raw JSON format (no markdown, no extra text) with the following structure:\n"
+    "{\n"
+    '  "questions": [\n'
+    '    {\n'
+    '      "id": "unique_question_id",\n'
+    '      "question": "The actual question text?",\n'
+    '      "options": ["option1", "option2", "option3", "option4"],\n'
+    '      "correctAnswer": "Correct option text",\n'
+    '      "explanation": "Brief explanation of the correct answer."\n'
+    '    },\n'
+    "    ... (repeat for 10 questions) ...\n"
+    "  ]\n"
+    "}"
+)
+
 
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
